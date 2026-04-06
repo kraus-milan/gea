@@ -1,15 +1,65 @@
 import * as tooltip from '@zag-js/tooltip'
 import { normalizeProps } from '@zag-js/vanilla'
 import ZagComponent from '../primitives/zag-component'
+import type { InferSchema, Props, Service, SpreadMap } from '../primitives/zag-types'
+import type { ClassProp, Positioning } from './types'
+import type { JSXNode } from '../types'
+import { cn } from '../utils/cn'
 
-export default class Tooltip extends ZagComponent {
+export type TooltipOpenChangeDetails = { open: boolean }
+
+export interface TooltipProps {
+  /** CSS class(es) applied to the root wrapper element. */
+  class?: ClassProp
+  /** Content rendered inside the trigger element. */
+  children: JSXNode
+  /** Content rendered inside the tooltip. */
+  content?: JSXNode
+  /** Controlled open state. */
+  open?: boolean
+  /** Initial open state (uncontrolled). */
+  defaultOpen?: boolean
+  /** Milliseconds to wait before opening after hover.
+   * @default 400 */
+  openDelay?: number
+  /** Milliseconds to wait before closing after hover ends.
+   * @default 150 */
+  closeDelay?: number
+  /** Closes the tooltip on pointer down.
+   * @default true */
+  closeOnPointerDown?: boolean
+  /** Closes the tooltip when the Escape key is pressed.
+   * @default true */
+  closeOnEscape?: boolean
+  /** Closes the tooltip when the page scrolls.
+   * @default true */
+  closeOnScroll?: boolean
+  /** Allows the user to hover over the tooltip content without it closing.
+   * @default false */
+  interactive?: boolean
+  /** Disables the tooltip when true. */
+  disabled?: boolean
+  /** Positioning options for the tooltip. */
+  positioning?: Positioning
+  /** Accessible label used when the tooltip has no visible text. */
+  'aria-label'?: string
+  /** Called when the open state changes. */
+  onOpenChange?: (details: TooltipOpenChangeDetails) => void
+}
+
+type ZE = {
+  Schema: InferSchema<tooltip.Machine>
+  Api: tooltip.Api
+}
+
+export default class Tooltip extends ZagComponent<TooltipProps, ZE> {
   declare open: boolean
 
-  createMachine(_props: any): any {
+  override createMachine() {
     return tooltip.machine
   }
 
-  getMachineProps(props: any) {
+  override getMachineProps(props: TooltipProps): Props<ZE> {
     return {
       id: this.id,
       open: props.open,
@@ -23,18 +73,18 @@ export default class Tooltip extends ZagComponent {
       disabled: props.disabled,
       positioning: props.positioning,
       'aria-label': props['aria-label'],
-      onOpenChange: (details: tooltip.OpenChangeDetails) => {
+      onOpenChange: (details) => {
         this.open = details.open
         props.onOpenChange?.(details)
       },
     }
   }
 
-  connectApi(service: any) {
+  override connectApi(service: Service<ZE>) {
     return tooltip.connect(service, normalizeProps)
   }
 
-  getSpreadMap() {
+  override getSpreadMap(): SpreadMap<ZE> {
     return {
       '[data-part="trigger"]': 'getTriggerProps',
       '[data-part="positioner"]': 'getPositionerProps',
@@ -44,13 +94,13 @@ export default class Tooltip extends ZagComponent {
     }
   }
 
-  syncState(api: any) {
+  override syncState(api: ZE['Api']) {
     this.open = api.open
   }
 
-  template(props: any) {
+  template(props: TooltipProps) {
     return (
-      <div class={props.class || ''} style={{ display: 'inline-block' }}>
+      <div class={cn(props.class)} style={{ display: 'inline-block' }}>
         <div data-part="trigger" class="tooltip-trigger" style={{ display: 'inline-block' }}>
           {props.children}
         </div>

@@ -1,16 +1,51 @@
 import * as pagination from '@zag-js/pagination'
 import { normalizeProps } from '@zag-js/vanilla'
 import ZagComponent from '../primitives/zag-component'
+import { cn } from '../utils/cn'
+import type { InferSchema, Props, Service, SpreadMap } from '../primitives/zag-types'
+import type { ClassProp } from './types'
 
-export default class Pagination extends ZagComponent {
+export interface PaginationProps {
+  /** CSS class(es) applied to the root element. */
+  class?: ClassProp
+  /** Total number of items to paginate. */
+  count?: number
+  /** Controlled current page (1-based). */
+  page?: number
+  /** Initial page (uncontrolled).
+   * @default 1 */
+  defaultPage?: number
+  /** Controlled number of items per page. */
+  pageSize?: number
+  /** Initial number of items per page (uncontrolled).
+   * @default 10 */
+  defaultPageSize?: number
+  /** Number of page buttons shown on each side of the current page.
+   * @default 1 */
+  siblingCount?: number
+  /** Renders page items as buttons or anchor links.
+   * @default "button" */
+  type?: PaginationType
+  /** Called when the current page changes. */
+  onPageChange?: (details: PaginationPageChangeDetails) => void
+  /** Called when the page size changes. */
+  onPageSizeChange?: (details: PaginationPageSizeChangeDetails) => void
+}
+
+type ZE = {
+  Schema: InferSchema<pagination.Machine>
+  Api: pagination.Api
+}
+
+export default class Pagination extends ZagComponent<PaginationProps, ZE> {
   page = 1
   totalPages = 1
 
-  createMachine(_props: any): any {
+  override createMachine() {
     return pagination.machine
   }
 
-  getMachineProps(props: any) {
+  override getMachineProps(props: PaginationProps): Props<ZE> {
     return {
       id: this.id,
       count: props.count ?? 0,
@@ -20,7 +55,7 @@ export default class Pagination extends ZagComponent {
       defaultPageSize: props.defaultPageSize ?? 10,
       siblingCount: props.siblingCount ?? 1,
       type: props.type ?? 'button',
-      onPageChange: (details: pagination.PageChangeDetails) => {
+      onPageChange: (details) => {
         this.page = details.page
         props.onPageChange?.(details)
       },
@@ -28,34 +63,34 @@ export default class Pagination extends ZagComponent {
     }
   }
 
-  connectApi(service: any) {
+  override connectApi(service: Service<ZE>) {
     return pagination.connect(service, normalizeProps)
   }
 
-  getSpreadMap() {
+  override getSpreadMap(): SpreadMap<ZE> {
     return {
       '[data-part="root"]': 'getRootProps',
       '[data-part="prev-trigger"]': 'getPrevTriggerProps',
       '[data-part="next-trigger"]': 'getNextTriggerProps',
       '[data-part="item"]': (api, el) => {
-        const value = parseInt((el as HTMLElement).dataset.value || '1', 10)
+        const value = parseInt(el.dataset.value || '1', 10)
         return api.getItemProps({ type: 'page', value })
       },
       '[data-part="ellipsis"]': (api, el) => {
-        const index = parseInt((el as HTMLElement).dataset.index || '0', 10)
+        const index = parseInt(el.dataset.index || '0', 10)
         return api.getEllipsisProps({ index })
       },
     }
   }
 
-  syncState(api: any) {
+  override syncState(api: ZE['Api']) {
     this.page = api.page
     this.totalPages = api.totalPages
   }
 
-  template(props: any) {
+  template(props: PaginationProps) {
     return (
-      <nav data-part="root" class={`pagination-root ${props.class || ''}`}>
+      <nav data-part="root" class={cn('pagination-root', props.class)}>
         <div class="flex items-center gap-1">
           <button
             data-part="prev-trigger"

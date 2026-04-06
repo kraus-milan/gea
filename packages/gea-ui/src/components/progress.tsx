@@ -1,16 +1,48 @@
 import * as progress from '@zag-js/progress'
 import { normalizeProps } from '@zag-js/vanilla'
 import ZagComponent from '../primitives/zag-component'
+import type { InferSchema, Props, Service, SpreadMap } from '../primitives/zag-types'
+import type { ClassProp, LabelProp } from './types'
+import { cn } from '../utils/cn'
 
-export default class Progress extends ZagComponent {
+export type ProgressValueChangeDetails = { value: number | null }
+
+export interface ProgressProps {
+  /** CSS class(es) applied to the root element. */
+  class?: ClassProp
+  /** Label content rendered above the progress bar. */
+  label?: LabelProp
+  /** Controlled value.  */
+  value?: number
+  /** Initial value (uncontrolled).
+   * @default 0 */
+  defaultValue?: number
+  /** Minimum value.
+   * @default 0 */
+  min?: number
+  /** Maximum value.
+   * @default 100 */
+  max?: number
+  /** Layout orientation of the progress bar. */
+  orientation?: 'horizontal' | 'vertical'
+  /** Called when the value changes. */
+  onValueChange?: (details: ProgressValueChangeDetails) => void
+}
+
+type ZE = {
+  Schema: InferSchema<progress.Machine>
+  Api: progress.Api
+}
+
+export default class Progress extends ZagComponent<ProgressProps, ZE> {
   declare value: number | null
   percent = 0
 
-  createMachine(_props: any): any {
+  override createMachine() {
     return progress.machine
   }
 
-  getMachineProps(props: any) {
+  override getMachineProps(props: ProgressProps): Props<ZE> {
     return {
       id: this.id,
       value: props.value,
@@ -22,11 +54,11 @@ export default class Progress extends ZagComponent {
     }
   }
 
-  connectApi(service: any) {
+  override connectApi(service: Service<ZE>) {
     return progress.connect(service, normalizeProps)
   }
 
-  getSpreadMap() {
+  override getSpreadMap(): SpreadMap<ZE> {
     return {
       '[data-part="root"]': 'getRootProps',
       '[data-part="label"]': 'getLabelProps',
@@ -36,14 +68,14 @@ export default class Progress extends ZagComponent {
     }
   }
 
-  syncState(api: any) {
+  override syncState(api: ZE['Api']) {
     this.value = api.value
     this.percent = api.percent
   }
 
-  template(props: any) {
+  template(props: ProgressProps) {
     return (
-      <div data-part="root" class={props.class || ''}>
+      <div data-part="root" class={cn(props.class)}>
         <div class="flex justify-between mb-1">
           {props.label && (
             <span data-part="label" class="progress-label text-sm font-medium">

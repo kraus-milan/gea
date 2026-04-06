@@ -1,22 +1,50 @@
 import { Component } from '@geajs/core'
-import type { JSXNode, MouseEventHandler } from '../types'
 import { cn } from '../utils/cn'
+import type { JSXNode, MouseEventHandler } from '../types'
+import type { ClassProp } from './types'
 
 export type ButtonVariant = 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link'
 export type ButtonSize = 'default' | 'sm' | 'lg' | 'icon'
+export type ButtonType = 'button' | 'submit' | 'reset'
 
-export interface ButtonProps {
-  variant?: ButtonVariant | (string & {})
-  size?: ButtonSize | (string & {})
-  type?: 'button' | 'submit' | 'reset'
+interface ButtonPropsCommon {
+  /** Visual style of the button.
+   * @default "default" */
+  variant?: ButtonVariant
+  /** Size preset of the button.
+   * @default "default" */
+  size?: ButtonSize
+  /** HTML `type` attribute on the underlying `<button>`.
+   * @default "button" */
+  type?: ButtonType
+  /** Disables the button when true. */
   disabled?: boolean
-  class?: string
-  click?: MouseEventHandler<HTMLButtonElement>
-  onClick?: MouseEventHandler<HTMLButtonElement>
+  /** CSS class(es) applied to the root element. */
+  class?: ClassProp
+  /** Content rendered inside the button. */
   children?: JSXNode
 }
 
-const variants: Record<string, string> = {
+interface ButtonPropsClick extends ButtonPropsCommon {
+  /** Click handler (Gea native event name). */
+  click: MouseEventHandler<HTMLButtonElement>
+  onClick?: never
+}
+
+interface ButtonPropsOnClick extends ButtonPropsCommon {
+  /** Click handler (React-style alias). */
+  onClick: MouseEventHandler<HTMLButtonElement>
+  click?: never
+}
+
+interface ButtonPropsNoHandler extends ButtonPropsCommon {
+  click?: never
+  onClick?: never
+}
+
+export type ButtonProps = ButtonPropsClick | ButtonPropsOnClick | ButtonPropsNoHandler
+
+const variants: Record<ButtonVariant, string> = {
   default: 'bg-primary text-primary-foreground shadow-xs hover:bg-primary/90',
   destructive: 'bg-destructive text-destructive-foreground shadow-xs hover:bg-destructive/90',
   outline: 'border border-input bg-background shadow-xs hover:bg-accent hover:text-accent-foreground',
@@ -25,7 +53,7 @@ const variants: Record<string, string> = {
   link: 'text-primary underline-offset-4 hover:underline',
 }
 
-const sizes: Record<string, string> = {
+const sizes: Record<ButtonSize, string> = {
   default: 'h-9 px-4 py-2',
   sm: 'h-8 rounded-md px-3 text-xs',
   lg: 'h-10 rounded-md px-8',
@@ -48,7 +76,7 @@ export default class Button extends Component<ButtonProps> {
         )}
         type={props.type || 'button'}
         disabled={props.disabled}
-        click={(e: any) => handleClick?.(e)}
+        click={(e) => handleClick?.(e)}
       >
         {props.children}
       </button>

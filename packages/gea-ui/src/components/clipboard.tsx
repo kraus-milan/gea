@@ -1,32 +1,57 @@
 import * as clipboard from '@zag-js/clipboard'
 import { normalizeProps } from '@zag-js/vanilla'
 import ZagComponent from '../primitives/zag-component'
+import { cn } from '../utils/cn'
+import type { InferSchema, Props, Service, SpreadMap } from '../primitives/zag-types'
+import type { ClassProp } from './types'
+import type { JSXNode } from '../types'
 
-export default class Clipboard extends ZagComponent {
+export interface ClipboardProps {
+  /** CSS class(es) applied to the root element. */
+  class?: ClassProp
+  /** Label content rendered above the input. */
+  label?: JSXNode
+  /** Controlled value to copy to the clipboard. */
+  value?: string
+  /** Initial value (uncontrolled). */
+  defaultValue?: string
+  /** Milliseconds the "copied" state is shown before resetting.
+   * @default 2000 */
+  timeout?: number
+  /** Called when the copy status changes. */
+  onStatusChange?: (details: clipboard.CopyStatusDetails) => void
+}
+
+type ZE = {
+  Schema: InferSchema<clipboard.Machine>
+  Api: clipboard.Api
+}
+
+export default class Clipboard extends ZagComponent<ClipboardProps, ZE> {
   copied = false
 
-  createMachine(_props: any): any {
+  override createMachine() {
     return clipboard.machine
   }
 
-  getMachineProps(props: any) {
+  override getMachineProps(props: ClipboardProps): Props<ZE> {
     return {
       id: this.id,
       value: props.value,
       defaultValue: props.defaultValue,
       timeout: props.timeout ?? 2000,
-      onStatusChange: (details: clipboard.CopyStatusDetails) => {
+      onStatusChange: (details) => {
         this.copied = details.copied
         props.onStatusChange?.(details)
       },
     }
   }
 
-  connectApi(service: any) {
+  override connectApi(service: Service<ZE>) {
     return clipboard.connect(service, normalizeProps)
   }
 
-  getSpreadMap() {
+  override getSpreadMap(): SpreadMap<ZE> {
     return {
       '[data-part="root"]': 'getRootProps',
       '[data-part="label"]': 'getLabelProps',
@@ -38,13 +63,13 @@ export default class Clipboard extends ZagComponent {
     }
   }
 
-  syncState(api: any) {
+  override syncState(api: ZE['Api']) {
     this.copied = api.copied
   }
 
-  template(props: any) {
+  template(props: ClipboardProps) {
     return (
-      <div data-part="root" class={props.class || ''}>
+      <div data-part="root" class={cn(props.class)}>
         {props.label && (
           <label data-part="label" class="clipboard-label text-sm font-medium mb-1 block">
             {props.label}

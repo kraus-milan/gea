@@ -1,15 +1,52 @@
 import * as checkbox from '@zag-js/checkbox'
 import { normalizeProps } from '@zag-js/vanilla'
 import ZagComponent from '../primitives/zag-component'
+import { cn } from '../utils/cn'
+import type { InferSchema, Props, Service, SpreadMap } from '../primitives/zag-types'
+import type { ClassProp } from './types'
+import type { JSXNode } from '../types'
 
-export default class Checkbox extends ZagComponent {
-  checked: boolean | 'indeterminate' = false
+export interface CheckboxProps {
+  /** CSS class(es) applied to the root element. */
+  class?: ClassProp
+  /** Label content rendered next to the checkbox. */
+  label?: JSXNode
+  /** Controlled checked state. */
+  checked?: checkbox.CheckedState
+  /** Initial checked state (uncontrolled). */
+  defaultChecked?: checkbox.CheckedState
+  /** Disables the checkbox when true. */
+  disabled?: boolean
+  /** Marks the checkbox as invalid. */
+  invalid?: boolean
+  /** Marks the checkbox as required. */
+  required?: boolean
+  /** Makes the checkbox read-only. */
+  readOnly?: boolean
+  /** Name attribute for form submission. */
+  name?: string
+  /** Associates the checkbox with a form element by id. */
+  form?: string
+  /** Value submitted with the form when checked.
+   * @default "on" */
+  value?: string
+  /** Called when the checked state changes. */
+  onCheckedChange?: (details: checkbox.CheckedChangeDetails) => void
+}
 
-  createMachine(_props: any): any {
+type ZE = {
+  Schema: InferSchema<checkbox.Machine>
+  Api: checkbox.Api
+}
+
+export default class Checkbox extends ZagComponent<CheckboxProps, ZE> {
+  checked: checkbox.CheckedState = false
+
+  override createMachine() {
     return checkbox.machine
   }
 
-  getMachineProps(props: any) {
+  override getMachineProps(props: CheckboxProps): Props<ZE> {
     return {
       id: this.id,
       checked: props.checked,
@@ -21,18 +58,18 @@ export default class Checkbox extends ZagComponent {
       name: props.name,
       form: props.form,
       value: props.value ?? 'on',
-      onCheckedChange: (details: checkbox.CheckedChangeDetails) => {
+      onCheckedChange: (details) => {
         this.checked = details.checked
         props.onCheckedChange?.(details)
       },
     }
   }
 
-  connectApi(service: any) {
+  override connectApi(service: Service<ZE>) {
     return checkbox.connect(service, normalizeProps)
   }
 
-  getSpreadMap() {
+  override getSpreadMap(): SpreadMap<ZE> {
     return {
       '[data-part="root"]': 'getRootProps',
       '[data-part="label"]': 'getLabelProps',
@@ -42,16 +79,13 @@ export default class Checkbox extends ZagComponent {
     }
   }
 
-  syncState(api: any) {
+  override syncState(api: ZE['Api']) {
     this.checked = api.checkedState
   }
 
-  template(props: any) {
+  template(props: CheckboxProps) {
     return (
-      <label
-        data-part="root"
-        class={`checkbox-root inline-flex items-center gap-2 cursor-pointer ${props.class || ''}`}
-      >
+      <label data-part="root" class={cn('checkbox-root inline-flex items-center gap-2 cursor-pointer', props.class)}>
         <input data-part="hidden-input" type="checkbox" class="sr-only" />
         <div
           data-part="control"

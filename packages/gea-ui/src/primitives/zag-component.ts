@@ -1,38 +1,35 @@
 import { Component, GEA_MAPS, GEA_SYNC_MAP, GEA_UPDATE_PROPS } from '@geajs/core'
 import { VanillaMachine, normalizeProps, spreadProps } from '@zag-js/vanilla'
+import type { Machine, Props, PropsGetter, Service, SpreadCleanup, SpreadMap, ZagElement } from './zag-types'
 
-type SpreadCleanup = () => void
-type PropsGetter = string | ((api: any, el: Element) => Record<string, any>)
-
-export interface SpreadMap {
-  [selector: string]: PropsGetter
-}
-
-export default class ZagComponent<P = Record<string, unknown>> extends Component<P> {
-  declare _machine: VanillaMachine<any> | null
-  declare _api: any
+export default abstract class ZagComponent<
+  P = Record<string, unknown>,
+  ZE extends ZagElement = ZagElement,
+> extends Component<P> {
+  declare _machine: VanillaMachine<ZE['Schema']> | null
+  declare _api: ZE['Api']
   declare _spreadCleanups: Map<string, SpreadCleanup>
   declare _spreadScheduled: boolean
-  declare _zagIdMap: Map<string, Element>
-  declare _elementCache: Map<string, Element[]>
+  declare _zagIdMap: Map<string, HTMLElement>
+  declare _elementCache: Map<string, HTMLElement[]>
 
-  createMachine(_props: any): any {
-    return null
+  createMachine(props: P): Machine<ZE> {
+    return
   }
 
-  getMachineProps(_props: any): any {
-    return {}
+  getMachineProps(props: P): Props<ZE> {
+    return
   }
 
-  connectApi(_service: any): any {
-    return null
+  connectApi(service: Service<ZE>): ZE['Api'] {
+    return
   }
 
-  getSpreadMap() {
-    return {}
+  getSpreadMap(): SpreadMap<ZE> {
+    return
   }
 
-  syncState(_api: any): void {}
+  syncState(_api: ZE['Api']): void {}
 
   created(props: P) {
     if (!this._spreadCleanups) this._spreadCleanups = new Map()
@@ -68,15 +65,15 @@ export default class ZagComponent<P = Record<string, unknown>> extends Component
   }
 
   _syncMachineProps() {
-    const machine = this._machine as any
-    if (!machine?.userPropsRef) return
+    const machine = this._machine
+    if (!machine?.['userPropsRef']) return
     const next = this.getMachineProps(this.props)
-    machine.userPropsRef.current = next
+    machine['userPropsRef'].current = next
     this._api = this.connectApi(this._machine!.service)
     this._scheduleSpreadApplication()
   }
 
-  [GEA_UPDATE_PROPS](nextProps: Record<string, any>) {
+  [GEA_UPDATE_PROPS](nextProps: P) {
     super[GEA_UPDATE_PROPS](nextProps)
     this._syncMachineProps()
   }
@@ -90,7 +87,7 @@ export default class ZagComponent<P = Record<string, unknown>> extends Component
     })
   }
 
-  _resolveProps(getter: PropsGetter, el: Element): Record<string, any> | null {
+  _resolveProps(getter: PropsGetter<ZE>, el: HTMLElement): Record<string, any> | null {
     if (typeof getter === 'function') {
       return getter(this._api, el)
     }
@@ -99,7 +96,7 @@ export default class ZagComponent<P = Record<string, unknown>> extends Component
     return method.call(this._api)
   }
 
-  _queryAllIncludingSelf(selector: string): Element[] {
+  _queryAllIncludingSelf(selector: string): HTMLElement[] {
     const results = this.$$(selector)
     const root = this.el
     if (root && root.matches(selector) && !results.includes(root)) {

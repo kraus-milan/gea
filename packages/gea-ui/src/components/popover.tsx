@@ -1,15 +1,62 @@
 import * as popover from '@zag-js/popover'
 import { normalizeProps } from '@zag-js/vanilla'
 import ZagComponent from '../primitives/zag-component'
+import type { InferSchema, Props, Service, SpreadMap } from '../primitives/zag-types'
+import type { ClassProp, Positioning } from './types'
+import type { JSXNode } from '../types'
+import { cn } from '../utils/cn'
 
-export default class Popover extends ZagComponent {
+export type PopoverOpenChangeDetails = { open: boolean }
+
+export interface PopoverProps {
+  /** CSS class(es) applied to the root element. */
+  class?: ClassProp
+  /** Content rendered inside the popover body. */
+  children: JSXNode
+  /** Label for the button that opens the popover. */
+  triggerLabel?: string
+  /** Title text rendered in the popover header. */
+  title?: string
+  /** Description text rendered below the title. */
+  description?: string
+  /** Controlled open state. */
+  open?: boolean
+  /** Initial open state (uncontrolled). */
+  defaultOpen?: boolean
+  /** Renders the popover as a modal overlay.
+   * @default false */
+  modal?: boolean
+  /** Renders the popover in a portal outside the DOM hierarchy.
+   * @default true */
+  portalled?: boolean
+  /** Automatically focuses the first focusable element when opened.
+   * @default true */
+  autoFocus?: boolean
+  /** Closes the popover when clicking outside its content.
+   * @default true */
+  closeOnInteractOutside?: boolean
+  /** Closes the popover when the Escape key is pressed.
+   * @default true */
+  closeOnEscape?: boolean
+  /** Positioning options for the popover. */
+  positioning?: Positioning
+  /** Called when the open state changes. */
+  onOpenChange?: (details: PopoverOpenChangeDetails) => void
+}
+
+type ZE = {
+  Schema: InferSchema<popover.Machine>
+  Api: popover.Api
+}
+
+export default class Popover extends ZagComponent<PopoverProps, ZE> {
   declare open: boolean
 
-  createMachine(_props: any): any {
+  override createMachine() {
     return popover.machine
   }
 
-  getMachineProps(props: any) {
+  override getMachineProps(props: PopoverProps): Props<ZE> {
     return {
       id: this.id,
       open: props.open,
@@ -20,18 +67,18 @@ export default class Popover extends ZagComponent {
       closeOnInteractOutside: props.closeOnInteractOutside ?? true,
       closeOnEscape: props.closeOnEscape ?? true,
       positioning: props.positioning,
-      onOpenChange: (details: popover.OpenChangeDetails) => {
+      onOpenChange: (details) => {
         this.open = details.open
         props.onOpenChange?.(details)
       },
     }
   }
 
-  connectApi(service: any) {
+  override connectApi(service: Service<ZE>) {
     return popover.connect(service, normalizeProps)
   }
 
-  getSpreadMap() {
+  override getSpreadMap(): SpreadMap<ZE> {
     return {
       '[data-part="trigger"]': 'getTriggerProps',
       '[data-part="positioner"]': 'getPositionerProps',
@@ -44,13 +91,13 @@ export default class Popover extends ZagComponent {
     }
   }
 
-  syncState(api: any) {
+  override syncState(api: ZE['Api']) {
     this.open = api.open
   }
 
-  template(props: any) {
+  template(props: PopoverProps) {
     return (
-      <div class={props.class || ''}>
+      <div class={cn(props.class)}>
         <button data-part="trigger" class="popover-trigger">
           {props.triggerLabel || 'Open'}
         </button>

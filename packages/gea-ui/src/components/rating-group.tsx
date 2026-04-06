@@ -1,16 +1,52 @@
 import * as ratingGroup from '@zag-js/rating-group'
 import { normalizeProps } from '@zag-js/vanilla'
 import ZagComponent from '../primitives/zag-component'
+import type { InferSchema, Props, Service, SpreadMap } from '../primitives/zag-types'
+import type { ClassProp, LabelProp } from './types'
+import { cn } from '../utils/cn'
 
-export default class RatingGroup extends ZagComponent {
+export type RatingGroupValueChangeDetails = { value: number }
+
+export interface RatingGroupProps {
+  /** CSS class(es) applied to the root element. */
+  class?: ClassProp
+  /** Label content rendered above the rating control. */
+  label?: LabelProp
+  /** Controlled rating value. */
+  value?: number
+  /** Initial rating value (uncontrolled). */
+  defaultValue?: number
+  /** Total number of stars to render.
+   * @default 5 */
+  count?: number
+  /** Allows selecting half-star values. */
+  allowHalf?: boolean
+  /** Makes the rating read-only. */
+  readOnly?: boolean
+  /** Disables the rating when true. */
+  disabled?: boolean
+  /** Name attribute for form submission. */
+  name?: string
+  /** Associates the rating with a form element by id. */
+  form?: string
+  /** Called when the rating value changes. */
+  onValueChange?: (details: RatingGroupValueChangeDetails) => void
+}
+
+type ZE = {
+  Schema: InferSchema<ratingGroup.Machine>
+  Api: ratingGroup.Api
+}
+
+export default class RatingGroup extends ZagComponent<RatingGroupProps, ZE> {
   declare value: number
   declare _allowHalf: boolean
 
-  createMachine(_props: any): any {
+  override createMachine() {
     return ratingGroup.machine
   }
 
-  getMachineProps(props: any) {
+  override getMachineProps(props: RatingGroupProps): Props<ZE> {
     this._allowHalf = !!props.allowHalf
     return {
       id: this.id,
@@ -22,30 +58,29 @@ export default class RatingGroup extends ZagComponent {
       disabled: props.disabled,
       name: props.name,
       form: props.form,
-      onValueChange: (details: ratingGroup.ValueChangeDetails) => {
+      onValueChange: (details) => {
         this.value = details.value
         props.onValueChange?.(details)
       },
     }
   }
 
-  connectApi(service: any) {
+  override connectApi(service: Service<ZE>) {
     return ratingGroup.connect(service, normalizeProps)
   }
 
-  getSpreadMap() {
+  override getSpreadMap(): SpreadMap<ZE> {
     return {
       '[data-part="root"]': 'getRootProps',
       '[data-part="label"]': 'getLabelProps',
       '[data-part="control"]': 'getControlProps',
       '[data-part="hidden-input"]': 'getHiddenInputProps',
       '[data-part="item"]': (api, el) => {
-        const htmlEl = el as HTMLElement
-        const index = parseInt(htmlEl.dataset.index || '0', 10)
+        const index = parseInt(el.dataset.index || '0', 10)
         const props = api.getItemProps({ index })
         if (this._allowHalf) {
           props.onpointerdown = (e: PointerEvent) => {
-            const rect = htmlEl.getBoundingClientRect()
+            const rect = el.getBoundingClientRect()
             const isLeftHalf = e.clientX - rect.left < rect.width / 2
             api.setValue(isLeftHalf ? index - 0.5 : index)
           }
@@ -55,7 +90,7 @@ export default class RatingGroup extends ZagComponent {
     }
   }
 
-  syncState(api: any) {
+  override syncState(api: ZE['Api']) {
     this.value = api.value
   }
 
@@ -81,23 +116,23 @@ export default class RatingGroup extends ZagComponent {
     }
   }
 
-  template(props: any) {
+  template(props: RatingGroupProps) {
     const count = props.count ?? 5
     const items = Array.from({ length: count }, (_, i) => i + 1)
     return (
-      <div data-part="root" class={props.class || ''}>
+      <div data-part="root" class={cn(props.class)}>
         {props.label && (
           <label data-part="label" class="rating-group-label text-sm font-medium mb-1 block">
             {props.label}
           </label>
         )}
         <div data-part="control" class="rating-group-control flex gap-0.5">
-          {items.map((i: number) => (
+          {items.map((i) => (
             <span
               key={i}
               data-part="item"
               data-index={String(i)}
-              class="rating-group-item cursor-pointer text-2xl text-muted-foreground data-[highlighted]:text-yellow-400 data-[checked]:text-yellow-400"
+              class="rating-group-item cursor-pointer text-2xl text-muted-foreground data-highlighted:text-yellow-400 data-checked:text-yellow-400"
               style={{ lineHeight: 1 }}
             >
               &#x2605;

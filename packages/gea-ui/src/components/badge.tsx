@@ -1,15 +1,28 @@
 import { Component } from '@geajs/core'
 import { cn } from '../utils/cn'
+import type { JSXNode } from '../types'
 
-const variants: Record<string, string> = {
+export type BadgeVariant = 'default' | 'secondary' | 'destructive' | 'outline'
+
+export interface BadgeProps {
+  /** CSS class(es) applied to the root element. */
+  class?: string
+  /** Visual style of the badge.
+   * @default "default" */
+  variant?: BadgeVariant
+  /** Content rendered inside the badge. */
+  children: JSXNode
+}
+
+const variants: Record<BadgeVariant, string> = {
   default: 'border-transparent bg-primary text-primary-foreground shadow hover:bg-primary/80',
   secondary: 'border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80',
   destructive: 'border-transparent bg-destructive text-destructive-foreground shadow hover:bg-destructive/80',
   outline: 'text-foreground',
 }
 
-export default class Badge extends Component {
-  template(props: any) {
+export default class Badge extends Component<BadgeProps> {
+  template(props: BadgeProps) {
     const variant = variants[props.variant || 'default'] || variants.default
 
     return (

@@ -1,8 +1,21 @@
-import { Component } from '@geajs/core'
+import { Component, DOMEvent } from '@geajs/core'
 import { cn } from '../utils/cn'
+import type { ClassProp } from './types'
+import { InputEventHandler } from '../types'
 
-export default class Textarea extends Component {
-  template(props: any) {
+export interface TextareaProps {
+  /** CSS class(es) applied to the root element. */
+  class?: ClassProp
+  placeholder?: string
+  disabled?: boolean
+  name?: string
+  rows?: number
+  value?: string
+  onInput?: InputEventHandler<HTMLTextAreaElement>
+}
+
+export default class Textarea extends Component<TextareaProps> {
+  template(props: TextareaProps) {
     return (
       <textarea
         class={cn(
@@ -13,7 +26,7 @@ export default class Textarea extends Component {
         disabled={props.disabled}
         name={props.name}
         rows={props.rows}
-        onInput={props.onInput}
+        input={props.onInput}
       >
         {props.value || ''}
       </textarea>

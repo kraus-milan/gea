@@ -1,26 +1,47 @@
 import * as avatar from '@zag-js/avatar'
 import { normalizeProps } from '@zag-js/vanilla'
 import ZagComponent from '../primitives/zag-component'
+import { cn } from '../utils/cn'
+import type { InferSchema, Props, Service, SpreadMap } from '../primitives/zag-types'
+import type { ClassProp } from './types'
 
-export default class Avatar extends ZagComponent {
+export interface AvatarProps {
+  /** CSS class(es) applied to the root element. */
+  class?: ClassProp
+  /** Full name; initials are derived and shown when no image is available. */
+  name?: string
+  /** Explicit fallback text shown when the image fails to load. */
+  fallback?: string
+  /** Image URL to display. */
+  src?: string
+  /** Called when the image load status changes. */
+  onStatusChange?: (details: avatar.StatusChangeDetails) => void
+}
+
+type ZE = {
+  Schema: InferSchema<avatar.Machine>
+  Api: avatar.Api
+}
+
+export default class Avatar extends ZagComponent<AvatarProps, ZE> {
   loaded = false
 
-  createMachine(_props: any): any {
+  override createMachine() {
     return avatar.machine
   }
 
-  getMachineProps(props: any) {
+  override getMachineProps(props: AvatarProps): Props<ZE> {
     return {
       id: this.id,
       onStatusChange: props.onStatusChange,
     }
   }
 
-  connectApi(service: any) {
+  override connectApi(service: Service<ZE>) {
     return avatar.connect(service, normalizeProps)
   }
 
-  getSpreadMap() {
+  override getSpreadMap(): SpreadMap<ZE> {
     return {
       '[data-part="root"]': 'getRootProps',
       '[data-part="image"]': 'getImageProps',
@@ -28,24 +49,24 @@ export default class Avatar extends ZagComponent {
     }
   }
 
-  syncState(api: any) {
+  override syncState(api: ZE['Api']) {
     this.loaded = api.loaded
   }
 
-  template(props: any) {
+  template(props: AvatarProps) {
     const initials =
       props.fallback ||
       (props.name
         ? props.name
             .split(' ')
-            .map((n: string) => n[0])
+            .map((n) => n[0])
             .join('')
             .toUpperCase()
         : '?')
     return (
       <div
         data-part="root"
-        class={`avatar-root relative inline-flex h-10 w-10 shrink-0 overflow-hidden rounded-full ${props.class || ''}`}
+        class={cn('avatar-root relative inline-flex h-10 w-10 shrink-0 overflow-hidden rounded-full', props.class)}
       >
         {props.src ? (
           <img

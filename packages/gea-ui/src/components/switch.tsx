@@ -1,15 +1,53 @@
 import * as switchMachine from '@zag-js/switch'
 import { normalizeProps } from '@zag-js/vanilla'
 import ZagComponent from '../primitives/zag-component'
+import type { InferSchema, Props, Service, SpreadMap } from '../primitives/zag-types'
+import type { ClassProp, LabelProp } from './types'
+import { cn } from '../utils/cn'
 
-export default class Switch extends ZagComponent {
+export type SwitchCheckedChangeDetails = { checked: boolean }
+
+export interface SwitchProps {
+  /** CSS class(es) applied to the root element. */
+  class?: ClassProp
+  /** Label content rendered next to the switch. */
+  label?: LabelProp
+  /** Controlled checked state. */
+  checked?: boolean
+  /** Initial checked state (uncontrolled). */
+  defaultChecked?: boolean
+  /** Disables the switch when true. */
+  disabled?: boolean
+  /** Marks the switch as invalid. */
+  invalid?: boolean
+  /** Marks the switch as required. */
+  required?: boolean
+  /** Makes the switch read-only. */
+  readOnly?: boolean
+  /** Name attribute for form submission. */
+  name?: string
+  /** Associates the switch with a form element by id. */
+  form?: string
+  /** Value submitted with the form when checked.
+   * @default "on" */
+  value?: string
+  /** Called when the checked state changes. */
+  onCheckedChange?: (details: SwitchCheckedChangeDetails) => void
+}
+
+type ZE = {
+  Schema: InferSchema<switchMachine.Machine>
+  Api: switchMachine.Api
+}
+
+export default class Switch extends ZagComponent<SwitchProps, ZE> {
   checked = false
 
-  createMachine(_props: any): any {
+  override createMachine() {
     return switchMachine.machine
   }
 
-  getMachineProps(props: any) {
+  override getMachineProps(props: SwitchProps): Props<ZE> {
     return {
       id: this.id,
       checked: props.checked,
@@ -21,18 +59,18 @@ export default class Switch extends ZagComponent {
       name: props.name,
       form: props.form,
       value: props.value ?? 'on',
-      onCheckedChange: (details: switchMachine.CheckedChangeDetails) => {
+      onCheckedChange: (details) => {
         this.checked = details.checked
         props.onCheckedChange?.(details)
       },
     }
   }
 
-  connectApi(service: any) {
+  override connectApi(service: Service<ZE>) {
     return switchMachine.connect(service, normalizeProps)
   }
 
-  getSpreadMap() {
+  override getSpreadMap(): SpreadMap<ZE> {
     return {
       '[data-part="root"]': 'getRootProps',
       '[data-part="label"]': 'getLabelProps',
@@ -42,13 +80,13 @@ export default class Switch extends ZagComponent {
     }
   }
 
-  syncState(api: any) {
+  override syncState(api: ZE['Api']) {
     this.checked = api.checked
   }
 
-  template(props: any) {
+  template(props: SwitchProps) {
     return (
-      <label data-part="root" class={`switch-root inline-flex items-center gap-2 cursor-pointer ${props.class || ''}`}>
+      <label data-part="root" class={cn('switch-root inline-flex items-center gap-2 cursor-pointer', props.class)}>
         <input data-part="hidden-input" type="checkbox" />
         <span
           data-part="control"

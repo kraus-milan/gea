@@ -1,19 +1,68 @@
 import * as slider from '@zag-js/slider'
 import { normalizeProps } from '@zag-js/vanilla'
 import ZagComponent from '../primitives/zag-component'
+import type { InferSchema, Props, Service, SpreadMap } from '../primitives/zag-types'
+import type { ClassProp, LabelProp } from './types'
+import { cn } from '../utils/cn'
 
 const THUMB_CLASS =
   'slider-thumb block h-5 w-5 rounded-full border-2 border-primary bg-background shadow ' +
   'transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring'
 
-export default class Slider extends ZagComponent {
+export type SliderValueChangeDetails = { value: number[] }
+
+export interface SliderProps {
+  /** CSS class(es) applied to the root element. */
+  class?: ClassProp
+  /** Label content rendered above the slider. */
+  label?: LabelProp
+  /** Controlled value(s) — one entry per thumb.  */
+  value?: number[]
+  /** Initial value(s) (uncontrolled).
+   * @default [50] */
+  defaultValue?: number[]
+  /** Minimum value.
+   * @default 0 */
+  min?: number
+  /** Maximum value.
+   * @default 100 */
+  max?: number
+  /** Amount to increment or decrement on each step.
+   * @default 1 */
+  step?: number
+  /** Layout orientation of the slider.
+   * @default "horizontal" */
+  orientation?: 'horizontal' | 'vertical'
+  /** How the thumb aligns relative to the track.
+   * @default "center" */
+  thumbAlignment?: 'center' | 'contain'
+  /** Disables the slider when true. */
+  disabled?: boolean
+  /** Makes the slider read-only. */
+  readOnly?: boolean
+  /** Name attribute for form submission. */
+  name?: string
+  /** Accessible label for the thumb when no visible label is present. */
+  'aria-label'?: string[]
+  /** Called while the value is being dragged. */
+  onValueChange?: (details: SliderValueChangeDetails) => void
+  /** Called when the drag interaction ends. */
+  onValueChangeEnd?: (details: SliderValueChangeDetails) => void
+}
+
+type ZE = {
+  Schema: InferSchema<slider.Machine>
+  Api: slider.Api
+}
+
+export default class Slider extends ZagComponent<SliderProps, ZE> {
   declare value: number[]
 
-  createMachine(_props: any): any {
+  override createMachine() {
     return slider.machine
   }
 
-  getMachineProps(props: any) {
+  override getMachineProps(props: SliderProps): Props<ZE> {
     return {
       id: this.id,
       value: props.value,
@@ -27,7 +76,7 @@ export default class Slider extends ZagComponent {
       readOnly: props.readOnly,
       name: props.name,
       'aria-label': props['aria-label'],
-      onValueChange: (details: slider.ValueChangeDetails) => {
+      onValueChange: (details) => {
         this.value = details.value
         props.onValueChange?.(details)
       },
@@ -35,11 +84,11 @@ export default class Slider extends ZagComponent {
     }
   }
 
-  connectApi(service: any) {
+  override connectApi(service: Service<ZE>) {
     return slider.connect(service, normalizeProps)
   }
 
-  getSpreadMap() {
+  override getSpreadMap(): SpreadMap<ZE> {
     return {
       '[data-part="root"]': 'getRootProps',
       '[data-part="label"]': 'getLabelProps',
@@ -47,11 +96,11 @@ export default class Slider extends ZagComponent {
       '[data-part="track"]': 'getTrackProps',
       '[data-part="range"]': 'getRangeProps',
       '[data-part="thumb"]': (api, el) => {
-        const index = parseInt((el as HTMLElement).dataset.index || '0', 10)
+        const index = parseInt(el.dataset.index || '0', 10)
         return api.getThumbProps({ index })
       },
       '[data-part="hidden-input"]': (api, el) => {
-        const index = parseInt((el as HTMLElement).dataset.index || '0', 10)
+        const index = parseInt(el.dataset.index || '0', 10)
         return api.getHiddenInputProps({ index })
       },
     }
@@ -89,7 +138,7 @@ export default class Slider extends ZagComponent {
     }
   }
 
-  syncState(api: any) {
+  override syncState(api: ZE['Api']) {
     this.value = api.value
   }
 
@@ -99,9 +148,9 @@ export default class Slider extends ZagComponent {
     super._applyAllSpreads()
   }
 
-  template(props: any) {
+  template(props: SliderProps) {
     return (
-      <div data-part="root" class={'w-full ' + (props.class || '')}>
+      <div data-part="root" class={cn('w-full', props.class)}>
         {props.label && (
           <div class="flex justify-between mb-2">
             <label data-part="label" class="slider-label text-sm font-medium">

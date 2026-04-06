@@ -1,8 +1,30 @@
 import { Component } from '@geajs/core'
 import { cn } from '../utils/cn'
+import type { ClassProp } from './types'
+import type { GInputEvent } from '../types'
 
-export default class Input extends Component {
-  template(props: any) {
+export interface InputProps {
+  /** CSS class(es) applied to the input element. */
+  class?: ClassProp
+  /** HTML input type.
+   * @default "text" */
+  type?: HTMLInputElement['type']
+  /** Placeholder text shown when the input is empty. */
+  placeholder?: string
+  /** Controlled value of the input. */
+  value?: string
+  /** Disables the input when true. */
+  disabled?: boolean
+  /** Name attribute for form submission. */
+  name?: string
+  /** `id` attribute applied to the input element. */
+  inputId?: string
+  /** Called on each input event. */
+  onInput?: (e: GInputEvent<HTMLInputElement>) => void
+}
+
+export default class Input extends Component<InputProps> {
+  template(props: InputProps) {
     return (
       <input
         class={cn(
@@ -15,7 +37,7 @@ export default class Input extends Component {
         disabled={props.disabled}
         name={props.name}
         id={props.inputId}
-        input={(e: Event) => props.onInput?.(e)}
+        input={(e) => props.onInput?.(e)}
       />
     )
   }

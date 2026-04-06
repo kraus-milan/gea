@@ -1,6 +1,17 @@
 import * as toast from '@zag-js/toast'
 import { VanillaMachine, normalizeProps, spreadProps } from '@zag-js/vanilla'
 import { Component } from '@geajs/core'
+import type { ClassProp } from './types'
+import { cn } from '../utils/cn'
+import { InferSchema } from '../primitives/zag-types'
+
+export interface ToasterProps {
+  /** CSS class(es) appended to the root group element (overrides default positioning).
+   * @default "bottom-0 right-0" */
+  class?: ClassProp
+  /** Options forwarded to the global toast store on first mount. */
+  storeProps?: toast.StoreProps
+}
 
 function stripStyle(props: Record<string, any>): Record<string, any> {
   const { style: _style, ...rest } = props
@@ -51,14 +62,17 @@ export class ToastStore {
   }
 }
 
-export class Toaster extends Component {
-  declare _machine: VanillaMachine<any> | null
-  declare _api: any
-  declare _toastMachines: Map<string, VanillaMachine<any>>
+type ToastSchema = InferSchema<toast.Machine>
+type ToastGroupSchema = InferSchema<toast.GroupMachine>
+
+export class Toaster extends Component<ToasterProps> {
+  declare _machine: VanillaMachine<ToastGroupSchema> | null
+  declare _api: toast.GroupApi
+  declare _toastMachines: Map<string, VanillaMachine<ToastSchema>>
   declare _spreadCleanups: Map<string, Array<() => void>>
   declare _currentToasts: toast.Options[]
 
-  created(props: any) {
+  created(props: ToasterProps) {
     this._toastMachines = new Map()
     this._spreadCleanups = new Map()
     this._currentToasts = []
@@ -167,7 +181,7 @@ export class Toaster extends Component {
 
     const toastEls = this.$$('[data-toast-id]')
     for (const el of toastEls) {
-      const toastId = (el as HTMLElement).dataset.toastId
+      const toastId = el.dataset.toastId
       if (!toastId) continue
 
       const toastMachine = this._toastMachines.get(toastId)
@@ -223,11 +237,14 @@ export class Toaster extends Component {
     super.dispose()
   }
 
-  template(props: any) {
+  template(props: ToasterProps) {
     return (
       <div
         data-part="group"
-        class={`toaster fixed z-[100] flex max-h-screen flex-col-reverse gap-2 p-4 ${props.class || 'bottom-0 right-0'}`}
+        class={cn(
+          'toaster fixed z-100 flex max-h-screen flex-col-reverse gap-2 p-4',
+          props.class || 'bottom-0 right-0',
+        )}
       />
     )
   }

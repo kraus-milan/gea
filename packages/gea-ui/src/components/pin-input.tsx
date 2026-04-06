@@ -1,16 +1,77 @@
 import * as pinInput from '@zag-js/pin-input'
 import { normalizeProps } from '@zag-js/vanilla'
 import ZagComponent from '../primitives/zag-component'
+import type { InferSchema, Props, Service, SpreadMap } from '../primitives/zag-types'
+import { ClassProp, LabelProp } from './types'
+import { cn } from '../utils/cn'
 
-export default class PinInput extends ZagComponent {
+export type PinInputType = 'alphanumeric' | 'numeric' | 'alphabetic'
+
+export type PinInputValueChangeDetails = { value: string[]; valueAsString: string }
+export type PinInputValueCompleteDetails = { value: string[]; valueAsString: string }
+export type PinInputValueInvalidDetails = { value: string; index: number }
+
+export interface PinInputProps {
+  /** CSS class(es) applied to the root element. */
+  class?: ClassProp
+  /** Label content rendered above the inputs. */
+  label?: LabelProp
+  /** Controlled array of per-field values. */
+  value?: string[]
+  /** Initial per-field values (uncontrolled). */
+  defaultValue?: string[]
+  /** Number of input fields to render.
+   * @default 4 */
+  count?: number
+  /** Character set accepted by each field.
+   * @default "numeric" */
+  type?: PinInputType
+  /** Enables OTP autocomplete hints (`autocomplete="one-time-code"`).
+   * @default false */
+  otp?: boolean
+  /** Masks the input values like a password field.
+   * @default false */
+  mask?: boolean
+  /** Placeholder character shown in each empty field.
+   * @default "○" */
+  placeholder?: string
+  /** Disables all input fields when true. */
+  disabled?: boolean
+  /** Makes all input fields read-only. */
+  readOnly?: boolean
+  /** Marks the pin input as invalid. */
+  invalid?: boolean
+  /** Name attribute for form submission. */
+  name?: string
+  /** Associates the hidden input with a form element by id. */
+  form?: string
+  /** Moves focus away from the last field when all fields are filled.
+   * @default false */
+  blurOnComplete?: boolean
+  /** Automatically focuses the first field on mount. */
+  autoFocus?: boolean
+  /** Called when any field value changes. */
+  onValueChange?: (details: PinInputValueChangeDetails) => void
+  /** Called when all fields have been filled. */
+  onValueComplete?: (details: PinInputValueCompleteDetails) => void
+  /** Called when an invalid character is entered. */
+  onValueInvalid?: (details: PinInputValueInvalidDetails) => void
+}
+
+type ZE = {
+  Schema: InferSchema<pinInput.Machine>
+  Api: pinInput.Api
+}
+
+export default class PinInput extends ZagComponent<PinInputProps, ZE> {
   declare value: string[]
   declare valueAsString: string
 
-  createMachine(_props: any): any {
+  override createMachine() {
     return pinInput.machine
   }
 
-  getMachineProps(props: any) {
+  override getMachineProps(props: PinInputProps): Props<ZE> {
     return {
       id: this.id,
       value: props.value,
@@ -27,7 +88,7 @@ export default class PinInput extends ZagComponent {
       form: props.form,
       blurOnComplete: props.blurOnComplete ?? false,
       autoFocus: props.autoFocus,
-      onValueChange: (details: pinInput.ValueChangeDetails) => {
+      onValueChange: (details) => {
         this.value = details.value
         this.valueAsString = details.valueAsString
         props.onValueChange?.(details)
@@ -37,33 +98,33 @@ export default class PinInput extends ZagComponent {
     }
   }
 
-  connectApi(service: any) {
+  override connectApi(service: Service<ZE>) {
     return pinInput.connect(service, normalizeProps)
   }
 
-  getSpreadMap() {
+  override getSpreadMap(): SpreadMap<ZE> {
     return {
       '[data-part="root"]': 'getRootProps',
       '[data-part="label"]': 'getLabelProps',
       '[data-part="control"]': 'getControlProps',
       '[data-part="hidden-input"]': 'getHiddenInputProps',
       '[data-part="input"]': (api, el) => {
-        const index = parseInt((el as HTMLElement).dataset.index || '0', 10)
+        const index = parseInt(el.dataset.index || '0', 10)
         return api.getInputProps({ index })
       },
     }
   }
 
-  syncState(api: any) {
+  override syncState(api: ZE['Api']) {
     this.value = api.value
     this.valueAsString = api.valueAsString
   }
 
-  template(props: any) {
+  template(props: PinInputProps) {
     const count = props.count ?? 4
     const inputs = Array.from({ length: count }, (_, i) => i)
     return (
-      <div data-part="root" class={props.class || ''}>
+      <div data-part="root" class={cn(props.class)}>
         {props.label && (
           <label data-part="label" class="pin-input-label text-sm font-medium mb-2 block">
             {props.label}

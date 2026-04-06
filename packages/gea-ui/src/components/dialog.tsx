@@ -1,35 +1,63 @@
 import * as dialog from '@zag-js/dialog'
-import type { OpenChangeDetails } from '@zag-js/dialog'
 import { normalizeProps } from '@zag-js/vanilla'
-import type { JSXNode } from '../types'
 import ZagComponent from '../primitives/zag-component'
+import type { InferSchema, Props, Service, SpreadMap } from '../primitives/zag-types'
+import type { ClassProp } from './types'
+import type { JSXNode } from '../types'
+import { cn } from '../utils/cn'
 
 export interface DialogProps {
-  class?: string
+  /** CSS class(es) applied to the root element. */
+  class?: ClassProp
+  /** Content rendered inside the dialog body. */
   children?: JSXNode
+  /** Label for the button that opens the dialog. */
   triggerLabel?: string
+  /** Title text rendered in the dialog header. */
   title?: string
+  /** Description text rendered below the title. */
   description?: string
+  /** Controlled open state. */
   open?: boolean
+  /** Initial open state (uncontrolled). */
   defaultOpen?: boolean
+  /** Renders the dialog as a modal with a backdrop.
+   * @default true */
   modal?: boolean
+  /** Closes the dialog when clicking outside its content.
+   * @default true */
   closeOnInteractOutside?: boolean
+  /** Closes the dialog when the Escape key is pressed.
+   * @default true */
   closeOnEscape?: boolean
+  /** Traps keyboard focus within the dialog while open.
+   * @default true */
   trapFocus?: boolean
+  /** Prevents the page from scrolling while the dialog is open.
+   * @default true */
   preventScroll?: boolean
-  role?: string
+  /** ARIA role applied to the dialog content.
+   * @default "dialog" */
+  role?: 'dialog' | 'alertdialog'
+  /** Accessible label used when no visible title is present. */
   'aria-label'?: string
-  onOpenChange?: (details: OpenChangeDetails) => void
+  /** Called when the open state changes. */
+  onOpenChange?: (details: dialog.OpenChangeDetails) => void
 }
 
-export default class Dialog extends ZagComponent<DialogProps> {
+type ZE = {
+  Schema: InferSchema<dialog.Machine>
+  Api: dialog.Api
+}
+
+export default class Dialog extends ZagComponent<DialogProps, ZE> {
   declare open: boolean
 
-  createMachine(_props: DialogProps): any {
+  override createMachine() {
     return dialog.machine
   }
 
-  getMachineProps(props: DialogProps) {
+  override getMachineProps(props: DialogProps): Props<ZE> {
     return {
       id: this.id,
       open: props.open,
@@ -41,28 +69,28 @@ export default class Dialog extends ZagComponent<DialogProps> {
       preventScroll: props.preventScroll ?? true,
       role: props.role ?? 'dialog',
       'aria-label': props['aria-label'],
-      onOpenChange: (details: OpenChangeDetails) => {
+      onOpenChange: (details) => {
         this.open = details.open
         props.onOpenChange?.(details)
       },
     }
   }
 
-  connectApi(service: any) {
+  override connectApi(service: Service<ZE>) {
     return dialog.connect(service, normalizeProps)
   }
 
-  getSpreadMap() {
+  override getSpreadMap(): SpreadMap<ZE> {
     return {
       '[data-part="backdrop"]': 'getBackdropProps',
-      '[data-part="positioner"]': (api: any) => ({
+      '[data-part="positioner"]': (api) => ({
         ...api.getPositionerProps(),
         hidden: !api.open,
       }),
       '[data-part="content"]': 'getContentProps',
       '[data-part="title"]': 'getTitleProps',
       '[data-part="description"]': 'getDescriptionProps',
-      '[data-part="close-trigger"]': (api: any) => {
+      '[data-part="close-trigger"]': (api) => {
         const { id: _, ...props } = api.getCloseTriggerProps()
         return {
           ...props,
@@ -74,7 +102,7 @@ export default class Dialog extends ZagComponent<DialogProps> {
           },
         }
       },
-      '[data-part="trigger"]': (api: any) => {
+      '[data-part="trigger"]': (api) => {
         const props = api.getTriggerProps()
         const origOnClick = props.onclick
         const preventTriggerFocus = (e: MouseEvent | PointerEvent) => {
@@ -100,7 +128,7 @@ export default class Dialog extends ZagComponent<DialogProps> {
 
   template(props: DialogProps) {
     return (
-      <div class={props.class || ''}>
+      <div class={cn(props.class)}>
         {props.triggerLabel && (
           <button data-part="trigger" class="dialog-trigger">
             {props.triggerLabel}

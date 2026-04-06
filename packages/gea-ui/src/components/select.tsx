@@ -1,24 +1,91 @@
 import * as select from '@zag-js/select'
 import { normalizeProps } from '@zag-js/vanilla'
+import type { PropTypes } from '@zag-js/types'
 import ZagComponent from '../primitives/zag-component'
+import type { InferSchema, Props, Service, SpreadMap } from '../primitives/zag-types'
+import type { ClassProp, LabelProp, Positioning } from './types'
+import { cn } from '../utils/cn'
 
-export default class Select extends ZagComponent {
+export interface SelectItem {
+  /** Display label shown in the list. Defaults to `value` if omitted. */
+  label?: string
+  /** Unique value identifying this item. */
+  value: string
+}
+
+export type SelectCollection<T extends SelectItem = SelectItem> = select.Props<T>['collection']
+export type SelectValueChangeDetails<T extends SelectItem = SelectItem> = { value: string[]; items: T[] }
+export type SelectOpenChangeDetails = { open: boolean }
+
+export interface SelectProps<T extends SelectItem = SelectItem> {
+  /** CSS class(es) applied to the root element. */
+  class?: ClassProp
+  /** Label content rendered above the select. */
+  label?: LabelProp
+  /** Placeholder text shown when nothing is selected. */
+  placeholder?: string
+  /** Array of items to populate the list (used when `collection` is not provided). */
+  items?: T[]
+  /** Pre-built Zag collection; takes precedence over `items`. */
+  collection?: SelectCollection<T>
+  /** Controlled selected values. */
+  value?: string[]
+  /** Initial selected values (uncontrolled). */
+  defaultValue?: string[]
+  /** Controlled open state of the listbox. */
+  open?: boolean
+  /** Initial open state (uncontrolled). */
+  defaultOpen?: boolean
+  /** Allows selecting multiple items. */
+  multiple?: boolean
+  /** Disables the select when true. */
+  disabled?: boolean
+  /** Marks the select as invalid. */
+  invalid?: boolean
+  /** Makes the select read-only. */
+  readOnly?: boolean
+  /** Marks the select as required. */
+  required?: boolean
+  /** Name attribute for form submission. */
+  name?: string
+  /** Associates the select with a form element by id. */
+  form?: string
+  /** Closes the listbox after an item is selected.
+   * @default true */
+  closeOnSelect?: boolean
+  /** Positioning options for the listbox popover. */
+  positioning?: Positioning
+  /** Wraps keyboard focus from last to first item and vice versa.
+   * @default false */
+  loopFocus?: boolean
+  /** Called when the selected value(s) change. */
+  onValueChange?: (details: SelectValueChangeDetails<T>) => void
+  /** Called when the listbox open state changes. */
+  onOpenChange?: (details: SelectOpenChangeDetails) => void
+}
+
+type ZE<T extends SelectItem> = {
+  Schema: InferSchema<select.Machine<T>>
+  Api: select.Api<PropTypes, T>
+}
+
+export default class Select<T extends SelectItem = SelectItem> extends ZagComponent<SelectProps<T>, ZE<T>> {
   declare open: boolean
   declare value: string[]
   declare valueAsString: string
 
-  createMachine(_props: any): any {
+  override createMachine() {
     return select.machine
   }
 
-  getMachineProps(props: any) {
+  override getMachineProps(props: SelectProps<T>): Props<ZE<T>> {
     const items = props.items || []
     const col =
       props.collection ||
       select.collection({
         items,
-        itemToValue: (item: any) => item.value,
-        itemToString: (item: any) => item.label || item.value,
+        itemToValue: (item: T) => item.value,
+        itemToString: (item: T) => item.label || item.value,
       })
 
     return {
@@ -38,23 +105,23 @@ export default class Select extends ZagComponent {
       closeOnSelect: props.closeOnSelect ?? true,
       positioning: props.positioning,
       loopFocus: props.loopFocus ?? false,
-      onValueChange: (details: select.ValueChangeDetails) => {
+      onValueChange: (details) => {
         this.value = details.value
-        this.valueAsString = details.items.map((i: any) => i.label || i.value).join(', ')
+        this.valueAsString = details.items.map((i: T) => i.label || i.value).join(', ')
         props.onValueChange?.(details)
       },
-      onOpenChange: (details: select.OpenChangeDetails) => {
+      onOpenChange: (details) => {
         this.open = details.open
         props.onOpenChange?.(details)
       },
     }
   }
 
-  connectApi(service: any) {
+  override connectApi(service: Service<ZE<T>>) {
     return select.connect(service, normalizeProps)
   }
 
-  getSpreadMap() {
+  override getSpreadMap(): SpreadMap<ZE<T>> {
     return {
       '[data-part="root"]': 'getRootProps',
       '[data-part="label"]': 'getLabelProps',
@@ -68,33 +135,33 @@ export default class Select extends ZagComponent {
       '[data-part="content"]': 'getContentProps',
       '[data-part="list"]': 'getListProps',
       '[data-part="item"]': (api, el) => {
-        const value = (el as HTMLElement).dataset.value
-        const label = (el as HTMLElement).dataset.label || value
-        return api.getItemProps({ item: { value, label } })
+        const value = el.dataset.value
+        const label = el.dataset.label || value
+        return api.getItemProps({ item: { value, label } as T })
       },
       '[data-part="item-text"]': (api, el) => {
-        const value = (el as HTMLElement).dataset.value
-        const label = (el as HTMLElement).dataset.label || value
-        return api.getItemTextProps({ item: { value, label } })
+        const value = el.dataset.value
+        const label = el.dataset.label || value
+        return api.getItemTextProps({ item: { value, label } as T })
       },
       '[data-part="item-indicator"]': (api, el) => {
-        const value = (el as HTMLElement).dataset.value
-        const label = (el as HTMLElement).dataset.label || value
-        return api.getItemIndicatorProps({ item: { value, label } })
+        const value = el.dataset.value
+        const label = el.dataset.label || value
+        return api.getItemIndicatorProps({ item: { value, label } as T })
       },
     }
   }
 
-  syncState(api: any) {
+  override syncState(api: ZE<T>['Api']) {
     this.open = api.open
     this.value = api.value
     this.valueAsString = api.valueAsString
   }
 
-  template(props: any) {
+  template(props: SelectProps<T>) {
     const items = props.items || []
     return (
-      <div data-part="root" class={props.class || ''}>
+      <div data-part="root" class={cn(props.class)}>
         {props.label && (
           <label data-part="label" class="select-label text-sm font-medium mb-1 block">
             {props.label}
@@ -117,16 +184,16 @@ export default class Select extends ZagComponent {
         <div data-part="positioner" class="select-positioner">
           <div
             data-part="content"
-            class="select-content z-50 min-w-[8rem] overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-md"
+            class="select-content z-50 min-w-32 overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-md"
           >
             <div data-part="list">
-              {items.map((item: any) => (
+              {items.map((item) => (
                 <div
                   key={item.value}
                   data-part="item"
                   data-value={item.value}
                   data-label={item.label}
-                  class="select-item relative flex cursor-pointer select-none items-center rounded-xs px-2 py-1.5 text-sm outline-hidden data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
+                  class="select-item relative flex cursor-pointer select-none items-center rounded-xs px-2 py-1.5 text-sm outline-hidden data-highlighted:bg-accent data-highlighted:text-accent-foreground data-disabled:pointer-events-none data-disabled:opacity-50"
                 >
                   <span data-part="item-text" data-value={item.value} data-label={item.label}>
                     {item.label}

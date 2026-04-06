@@ -1,16 +1,67 @@
 import * as numberInput from '@zag-js/number-input'
 import { normalizeProps } from '@zag-js/vanilla'
 import ZagComponent from '../primitives/zag-component'
+import { cn } from '../utils/cn'
+import type { InferSchema, Props, Service, SpreadMap } from '../primitives/zag-types'
+import type { ClassProp, LabelProp } from './types'
 
-export default class NumberInput extends ZagComponent {
+export type NumberInputValueChangeDetails = { value: string; valueAsNumber: number }
+
+export interface NumberInputProps {
+  /** CSS class(es) applied to the root element. */
+  class?: ClassProp
+  /** Label content rendered above the input. */
+  label?: LabelProp
+  /** Controlled string value of the input. */
+  value?: string
+  /** Initial value (uncontrolled). */
+  defaultValue?: string
+  /** Minimum allowed value. */
+  min?: number
+  /** Maximum allowed value. */
+  max?: number
+  /** Amount to increment or decrement on each step.
+   * @default 1 */
+  step?: number
+  /** Disables the input when true. */
+  disabled?: boolean
+  /** Makes the input read-only. */
+  readOnly?: boolean
+  /** Marks the input as invalid. */
+  invalid?: boolean
+  /** Marks the input as required. */
+  required?: boolean
+  /** Name attribute for form submission. */
+  name?: string
+  /** Associates the input with a form element by id. */
+  form?: string
+  /** Allows changing the value by scrolling over the input. */
+  allowMouseWheel?: boolean
+  /** Clamps the value to `min`/`max` when the input loses focus.
+   * @default true */
+  clampValueOnBlur?: boolean
+  /** `Intl.NumberFormat` options used to format the displayed value. */
+  formatOptions?: numberInput.Props['formatOptions']
+  /** BCP 47 locale tag used for number formatting. */
+  locale?: string
+  /** Called when the value changes. */
+  onValueChange?: (details: numberInput.ValueChangeDetails) => void
+}
+
+type ZE = {
+  Schema: InferSchema<numberInput.Machine>
+  Api: numberInput.Api
+}
+
+export default class NumberInput extends ZagComponent<NumberInputProps, ZE> {
   declare value: string
   declare valueAsNumber: number
 
-  createMachine(_props: any): any {
+  override createMachine() {
     return numberInput.machine
   }
 
-  getMachineProps(props: any) {
+  override getMachineProps(props: NumberInputProps): Props<ZE> {
     return {
       id: this.id,
       value: props.value,
@@ -28,7 +79,7 @@ export default class NumberInput extends ZagComponent {
       clampValueOnBlur: props.clampValueOnBlur ?? true,
       formatOptions: props.formatOptions,
       locale: props.locale,
-      onValueChange: (details: numberInput.ValueChangeDetails) => {
+      onValueChange: (details) => {
         this.value = details.value
         this.valueAsNumber = details.valueAsNumber
         props.onValueChange?.(details)
@@ -36,11 +87,11 @@ export default class NumberInput extends ZagComponent {
     }
   }
 
-  connectApi(service: any) {
+  override connectApi(service: Service<ZE>) {
     return numberInput.connect(service, normalizeProps)
   }
 
-  getSpreadMap() {
+  override getSpreadMap(): SpreadMap<ZE> {
     return {
       '[data-part="root"]': 'getRootProps',
       '[data-part="label"]': 'getLabelProps',
@@ -52,14 +103,14 @@ export default class NumberInput extends ZagComponent {
     }
   }
 
-  syncState(api: any) {
+  override syncState(api: ZE['Api']) {
     this.value = api.value
     this.valueAsNumber = api.valueAsNumber
   }
 
-  template(props: any) {
+  template(props: NumberInputProps) {
     return (
-      <div data-part="root" class={props.class || ''}>
+      <div data-part="root" class={cn(props.class)}>
         {props.label && (
           <label data-part="label" class="number-input-label text-sm font-medium mb-1 block">
             {props.label}
