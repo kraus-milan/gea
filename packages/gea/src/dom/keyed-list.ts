@@ -191,15 +191,16 @@ export function keyedList(
     // Fast path: empty list (clear)
     if (newLen === 0) {
       if (oldLen > 0) {
+        // Always use fast bulk DOM clear — single textContent='' beats N removeChild calls
+        parent.textContent = '';
+        parent.appendChild(anchor);
         if (poolEnabled) {
-          // Pool entries before clearing DOM — another keyed-list may reclaim them
+          // Pool entries for cross-list reclaim — nodes are already detached so
+          // poolEntry() skips the per-node removeChild, keeping this O(n) bookkeeping only.
           for (let i = 0; i < oldLen; i++) {
             poolEntry(pg, oldKeys[i], keyMap.get(oldKeys[i])!, keyMap);
           }
         } else {
-          // No pooling — fast bulk DOM clear
-          parent.textContent = '';
-          parent.appendChild(anchor);
           for (let i = 0; i < oldLen; i++) {
             disposeEntry(keyMap.get(oldKeys[i])!);
           }
@@ -360,8 +361,12 @@ export function keyedList(
         }
       }
       if (isFullReplace) {
+        // Bulk clear DOM first — single textContent='' beats N removeChild calls
+        parent.textContent = '';
+        parent.appendChild(anchor);
         if (poolEnabled) {
           // Pool all old entries (another keyed-list may reclaim them)
+          // Nodes are already detached so poolEntry skips per-node removeChild.
           for (let i = 0; i < oldLen; i++) {
             poolEntry(pg, oldKeys[i], keyMap.get(oldKeys[i])!, keyMap);
           }
@@ -371,10 +376,6 @@ export function keyedList(
           }
         }
         keyMap.clear();
-
-        // Bulk clear DOM and re-create all
-        parent.textContent = '';
-        parent.appendChild(anchor);
 
         // Create all new rows with effect stack management outside the loop
         const outerNode2 = getActiveEffect();

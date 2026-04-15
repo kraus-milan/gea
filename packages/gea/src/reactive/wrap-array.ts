@@ -9,7 +9,6 @@
  * No eager iteration — the compiler inserts ensureItemSignal calls at all access sites.
  */
 import { signal, type Signal } from '../signals/signal.js';
-import { batch } from '../signals/batch.js';
 
 const MUTATING = ['push', 'pop', 'shift', 'unshift', 'splice', 'sort', 'reverse'];
 
@@ -19,21 +18,6 @@ const WRAPPED = Symbol.for('gea.wrapped');
 const _markerDesc: PropertyDescriptor = { value: true };
 
 const SIG_PREFIX = '$$gea_s$';
-
-// Item → parent array signal mapping.  When an item property signal fires,
-// we also notify the parent array so that dependents (keyed-list effects
-// calling .filter() etc.) re-evaluate without needing per-property
-// compiler transforms on every call site.
-const _itemParent = new WeakMap<object, Signal<unknown>>();
-
-function registerItems(arr: any[], parentSignal: Signal<unknown>): void {
-  for (let i = 0; i < arr.length; i++) {
-    const item = arr[i];
-    if (typeof item === 'object' && item !== null) {
-      _itemParent.set(item, parentSignal);
-    }
-  }
-}
 
 export function ensureItemSignal(obj: any, key: string): Signal<unknown> {
   const sk = SIG_PREFIX + key;
@@ -48,22 +32,12 @@ export function ensureItemSignal(obj: any, key: string): Signal<unknown> {
       wrapArray(raw, s as Signal<any>);
     }
     // Install getter/setter so mutations notify the signal.
+    // No parent array notification — keyed-list subscribes to item signals
+    // directly via the render callback. Computed derivations (.filter() etc.)
+    // should be explicit in the store rather than relying on implicit bubbling.
     Object.defineProperty(obj, key, {
       get() { return s!.value; },
-      set(v: unknown) {
-        // Bubble to the parent array signal (if any) so that dependents
-        // of the array (e.g. keyed-list effects whose itemsFn calls
-        // .filter(i => i.status === ...)) re-evaluate.
-        const parentSig = _itemParent.get(obj);
-        if (parentSig) {
-          batch(() => {
-            s!.value = v;
-            parentSig._notify();
-          });
-        } else {
-          s!.value = v;
-        }
-      },
+      set(v: unknown) { s!.value = v; },
       enumerable: true,
       configurable: true,
     });
@@ -80,9 +54,6 @@ export function wrapArray<T>(arr: T[], parentSignal: Signal<T[]>): T[] {
   // Mark as wrapped
   Object.defineProperty(arr, WRAPPED, _markerDesc);
 
-  // Register current items so ensureItemSignal setters bubble to parent
-  registerItems(arr, parentSignal as Signal<unknown>);
-
   // Override mutating methods — notify parent signal after mutation.
   for (let _m = 0; _m < MUTATING.length; _m++) { const methodName = MUTATING[_m];
     const original = (Array.prototype as any)[methodName];
@@ -90,8 +61,6 @@ export function wrapArray<T>(arr: T[], parentSignal: Signal<T[]>): T[] {
       value: function (this: T[], ...args: any[]) {
         const result = original.apply(arr, args);
         parentSignal._notify();
-        // Register any newly added items (push, unshift, splice)
-        registerItems(arr, parentSignal as Signal<unknown>);
         return result;
       },
       writable: true,
